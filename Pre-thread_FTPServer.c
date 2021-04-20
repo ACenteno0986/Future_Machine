@@ -18,23 +18,24 @@ char ruta[1024];
 int main(int argc,char *argv[])
 {
 
-    int opcion = getopt(argc,argv,"n:r:p");
+    int opcion;
 
-    while(opcion){
+    while((opcion= getopt(argc,argv,"n:w:p:")) != -1){
 
-        if('n'){
+        switch(opcion){
+
+          case('n'):
             conexiones = atoi(optarg);
             printf("%d Conexiones: ", conexiones);
 
-        }else if('r'){
+          case('w'):
             strcpy(ruta, optarg);
 
-
-        }else if('p'){
+          case('p'):
             puerto = atoi(optarg);
+          
         }
     }
-
 
   struct sockaddr_in server, client;
   struct stat obj;
@@ -48,7 +49,7 @@ int main(int argc,char *argv[])
       printf("Socket creation failed");
       exit(1);
     }
-  server.sin_port = atoi(argv[1]);
+  server.sin_port = puerto;
   server.sin_addr.s_addr = 0;
   k = bind(sock1,(struct sockaddr*)&server,sizeof(server));
   if(k == -1)
@@ -146,4 +147,5 @@ int main(int argc,char *argv[])
 	}
     }
   return 0;
+
 }
