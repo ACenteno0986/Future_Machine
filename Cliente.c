@@ -35,13 +35,12 @@ int main(int argc,char *argv[])
       exit(1);
     }
   int i = 1;
-  while(1)
+  int limite = 2;
+  while(limite < argc)
     {
-      printf("Enter a choice:\n1- get\n2- put\n3- pwd\n4- ls\n5- cd\n6- quit\n");
-      scanf("%d", &choice);
-      switch(choice)
+      
+	if(strcmp( argv[limite] ,"get") == 0)
 	{
-	case 1:
 	  printf("Enter filename to get: ");
 	  scanf("%s", filename);
 	  strcpy(buf, "get ");
@@ -70,7 +69,9 @@ int main(int argc,char *argv[])
 	  strcat(buf, filename);
 	  system(buf);
 	  break;
-	case 2:
+	}
+	else if(strcmp( argv[limite] ,"put") == 0)
+	{
 	  printf("Enter filename to put to server: ");
           scanf("%s", filename);
 	  filehandle = open(filename, O_RDONLY);
@@ -92,13 +93,17 @@ int main(int argc,char *argv[])
 	  else
 	    printf("File failed to be stored to remote machine\n");
 	  break;
-	case 3:
+	}
+	else if(strcmp( argv[limite] ,"pwd") == 0)
+	{
 	  strcpy(buf, "pwd");
 	  send(sock, buf, 100, 0);
 	  recv(sock, buf, 100, 0);
 	  printf("The path of the remote directory is: %s\n", buf);
 	  break;
-	case 4:
+	}
+	else if(strcmp( argv[limite] ,"ls") == 0)
+	{
 	  strcpy(buf, "ls");
           send(sock, buf, 100, 0);
 	  recv(sock, &size, sizeof(int), 0);
@@ -110,7 +115,9 @@ int main(int argc,char *argv[])
           printf("The remote directory listing is as follows:\n");
 	  system("cat temp.txt");
 	  break;
-	case 5:
+	}
+	else if(strcmp( argv[limite] ,"cd") == 0)
+	{
 	  strcpy(buf, "cd ");
 	  printf("Enter the path to change the remote directory: ");
 	  scanf("%s", buf + 3);
@@ -121,7 +128,9 @@ int main(int argc,char *argv[])
           else
             printf("Remote directory failed to change\n");
           break;
-	case 6:
+	}
+	else if(strcmp( argv[limite] ,"quit") == 0)
+	{
 	  strcpy(buf, "quit");
           send(sock, buf, 100, 0);
           recv(sock, &status, 100, 0);
@@ -132,5 +141,6 @@ int main(int argc,char *argv[])
 	    }
 	    printf("Server failed to close connection\n");
 	}
+	limite += 1;
     }
 }
