@@ -16,7 +16,7 @@ int conexiones, puerto;
 char ruta[1024];
 struct sockaddr_in server, client;
 struct stat obj;
-int sock1, sock2;
+int sock2;
 char buf[100], command[5], filename[20];
 int k, i, size, len, c;
 int filehandle;
@@ -24,6 +24,7 @@ pthread_t *hilos;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
+void* procesar_solicitud(int* cliente);
 
 struct nodo{
     struct nodo* sig;
@@ -64,107 +65,62 @@ int* desencolar(){
     }
 }
 
-
-void crear_hilos(){
-	
-}
-
 void* funcion_hilo(void*arg){
     
     while (true){
-        
 
-        int* pcliente ;
+        int* cliente ;
 
         pthread_mutex_lock(&mutex);
-        pcliente = desencolar();
+        cliente = desencolar();
         pthread_mutex_unlock(&mutex);
 
-        if(pcliente != NULL){
-            ManejarConexion(pcliente);
+        if(cliente != NULL){
+            procesar_solicitud(cliente);
         }
     }
     pthread_exit(NULL);
     
 }
 
-int main(int argc,char *argv[])
-{
+void crear_hilos(){
+	  for(int i = 0; i<conexiones;i++ ){
 
-  int opcion ;
+      printf("%d", i);
 
-	while((opcion = getopt(argc,argv,"n:w:p:")) != -1)
-	{
-	
-		switch (opcion)
-		{
-			case 'n'://numero de conexiones maximas
-				conexiones = atoi(optarg);
-
-			case 'w':// direccion root del servidor
-				strcpy(ruta, optarg); 
-				
-			case 'p':// puerto del servidor
-				puerto = atoi(optarg);
-            
-			}
-			printf("opcion: %d", opcion);
-	}
-
-printf("Conexiones: %d", conexiones);
-
-  sock1 = socket(AF_INET, SOCK_STREAM, 0);
-  if(sock1 == -1)
-    {
-      printf("Socket creation failed");
-      exit(1);
+      pthread_create(&hilos[i],NULL,funcion_hilo,NULL);
     }
-  
-  server.sin_port = puerto;
-  server.sin_addr.s_addr = 0;
-  k = bind(sock1,(struct sockaddr*)&server,sizeof(server));
-  if(k == -1)
-    {
-      printf("Binding error");
-      exit(1);
-    }
-   
-  k = listen(sock1,1);
-  if(k == -1)
-    {
-      printf("Listen failed");
-      exit(1);
-    }
-  len = sizeof(client);
-  sock2 = accept(sock1,(struct sockaddr*)&client, &len);
-  i = 1; 
-  while(1)
-    {
-      recv(sock2, buf, 100, 0);
+}
+
+void* procesar_solicitud(int* cliente){
+  i = 0;
+  while(1){
+
+      recv(*cliente, buf, 100, 0);
       sscanf(buf, "%s", command);
-      if(!strcmp(command, "ls"))
-	{
-	  system("ls >temps.txt");
-	  i = 0;
-	  stat("temps.txt",&obj);
-	  size = obj.st_size;
-	  send(sock2, &size, sizeof(int),0);
-	  filehandle = open("temps.txt", O_RDONLY);
-	  sendfile(sock2,filehandle,NULL,size);
-	}
-      else if(!strcmp(command,"get"))
-	{
-	  sscanf(buf, "%s%s", filename, filename);
-	  stat(filename, &obj);
-	  filehandle = open(filename, O_RDONLY);
-	  size = obj.st_size;
-	  if(filehandle == -1)
-	      size = 0;
-	  send(sock2, &size, sizeof(int), 0);
-	  if(size)
-	  sendfile(sock2, filehandle, NULL, size);
+      if(!strcmp(command, "ls")){
+
+	      system("ls >temps.txt");
+	      i = 0;
+	      stat("temps.txt",&obj);
+	      size = obj.st_size;
+	      send(sock2, &size, sizeof(int),0);
+	      filehandle = open("temps.txt", O_RDONLY);
+	      sendfile(sock2,filehandle,NULL,size);
+	    }
+      else if(!strcmp(command,"get")){
+
+	      sscanf(buf, "%s%s", filename, filename);
+	      stat(filename, &obj);
+	      filehandle = open(filename, O_RDONLY);
+	      size = obj.st_size;
+	      if(filehandle == -1)
+	        size = 0;
+	      send(sock2, &size, sizeof(int), 0);
+	      if(size)
+	        sendfile(sock2, filehandle, NULL, size);
       
-	}
+	    }
       else if(!strcmp(command, "put"))
         {
 	  int c = 0, len;
@@ -218,6 +174,82 @@ printf("Conexiones: %d", conexiones);
 	  exit(0);
 	}
     }
+
+}
+
+int main(int argc,char *argv[])
+{
+  printf("debbug\n");
+  int opcion;
+  
+
+	while((opcion = getopt(argc,argv,"n:w:p:")) != -1)
+	{
+		switch (opcion)
+		{
+			case 'n'://numero de conexiones maximas
+				conexiones = atoi(optarg);
+
+			case 'w':// direccion root del servidor
+				strcpy(ruta, optarg); 
+				
+			case 'p':// puerto del servidor
+				puerto = atoi(optarg);
+            
+			}
+			
+	}
+
+printf("Conexiones: %d\n", conexiones);
+
+  
+  int sock1;
+  sock1 = socket(AF_INET, SOCK_STREAM, 0);
+  printf("socket: %d\n", sock1);
+  if(sock1 == -1)
+    {
+      printf("Socket creation failed\n");
+      exit(1);
+    }
+  
+  server.sin_port = puerto;
+  server.sin_addr.s_addr = 0;
+  server.sin_family = AF_INET;
+  k = bind(sock1,(struct sockaddr*)&server,sizeof(server));
+  if(k == -1)
+    {
+      printf("Binding error\n");
+      exit(1);
+    }
+   
+  k = listen(sock1,1);
+  if(k == -1)
+    {
+      printf("Listen failed");
+      exit(1);
+    }
+
+  pthread_t hilos_aux[conexiones];
+  hilos = &hilos_aux[0];
+  crear_hilos();
+  chdir(ruta);
+
+
+  while(true){
+    len = sizeof(client);
+    sock2 = accept(sock1,(struct sockaddr*)&client, &len);
+
+
+        int* cliente = malloc(sizeof(int));
+        *cliente = sock2;
+
+        //se usa el mutex para asegurar que solo un hilo use la cola a la vez
+        pthread_mutex_lock(&mutex);
+        encolar(cliente);
+        pthread_mutex_unlock(&mutex);
+
+  }
+
   return 0;
 
 }
