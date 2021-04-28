@@ -22,7 +22,7 @@ int main(int argc,char *argv[])
 
   if(sock == -1)
     {
-      printf("socket creation failed");
+      printf("Falló en creación del Socket");
       exit(1);
     }
   server.sin_family = AF_INET;
@@ -31,18 +31,15 @@ int main(int argc,char *argv[])
   k = connect(sock,(struct sockaddr*)&server, sizeof(server));
   if(k == -1)
     {
-      printf("Connect Error");
+      printf("Error de conexión.");
       exit(1);
     }
   int i = 1;
-  while(1)
-    {
-      printf("Enter a choice:\n1- get\n2- put\n3- pwd\n4- ls\n5- cd\n6- quit\n");
-      scanf("%d", &choice);
-      switch(choice)
+  for(int x = 2; i<argc;x++){
+      
+	if(strcmp(argv[x] ,"get") == 0)
 	{
-	case 1:
-	  printf("Enter filename to get: ");
+	  printf("Nombre de archivo a descargar: ");
 	  scanf("%s", filename);
 	  strcpy(buf, "get ");
 	  strcat(buf, filename);
@@ -50,8 +47,8 @@ int main(int argc,char *argv[])
 	  recv(sock, &size, sizeof(int), 0);
 	  if(!size)
 	    {
-	      printf("No such file on the remote directory\n\n");
-	    break;
+	      printf("EL archivo no existe.\n\n");
+
 	    }
 	  f = malloc(size);
 	  recv(sock, f, size, 0);
@@ -60,26 +57,27 @@ int main(int argc,char *argv[])
 	      filehandle = open(filename, O_CREAT | O_EXCL | O_WRONLY, 0666);
 	      if(filehandle == -1)
 		{
-		  sprintf(filename + strlen(filename), "%d", i);//needed only if same directory is used for both server and client
+		  sprintf(filename + strlen(filename), "%d", i);
 		}
 	      else break;
-	    }
+		}
 	  write(filehandle, f, size, 0);
 	  close(filehandle);
 	  strcpy(buf, "cat ");
 	  strcat(buf, filename);
 	  system(buf);
-	  break;
-	case 2:
-	  printf("Enter filename to put to server: ");
-          scanf("%s", filename);
+
+	}
+	else if(strcmp( argv[x] ,"put") == 0)
+	{
+	  printf("Nonbre de archivo a cargar: ");
+      scanf("%s", filename);
 	  filehandle = open(filename, O_RDONLY);
-          if(filehandle == -1)
-            {
-              printf("No such file on the local directory\n\n");
-              break;
-            }
-          strcpy(buf, "put ");
+      if(filehandle == -1){
+      	printf("El archivo no existe.\n\n");
+
+    	}
+      strcpy(buf, "put ");
 	  strcat(buf, filename);
 	  send(sock, buf, 100, 0);
 	  stat(filename, &obj);
@@ -88,17 +86,21 @@ int main(int argc,char *argv[])
 	  sendfile(sock, filehandle, NULL, size);
 	  recv(sock, &status, sizeof(int), 0);
 	  if(status)
-	    printf("File stored successfully\n");
+	    printf("Archivo subido exitosamente.\n");
 	  else
-	    printf("File failed to be stored to remote machine\n");
-	  break;
-	case 3:
-	  strcpy(buf, "pwd");
+	    printf("Fallo al enviar el archivo.\n");
+
+	}
+	else if(strcmp( argv[x] ,"connect") == 0)
+	{
+	  strcpy(buf, "connect");
 	  send(sock, buf, 100, 0);
 	  recv(sock, buf, 100, 0);
-	  printf("The path of the remote directory is: %s\n", buf);
-	  break;
-	case 4:
+	  printf("El servider dice hola desde: %s\n", buf);
+
+	}
+	else if(strcmp( argv[x] ,"ls") == 0)
+	{
 	  strcpy(buf, "ls");
           send(sock, buf, 100, 0);
 	  recv(sock, &size, sizeof(int), 0);
@@ -107,31 +109,35 @@ int main(int argc,char *argv[])
 	  filehandle = creat("temp.txt", O_WRONLY);
 	  write(filehandle, f, size, 0);
 	  close(filehandle);
-          printf("The remote directory listing is as follows:\n");
+          printf("Archivos en servidor remoto:\n");
 	  system("sudo cat temp.txt");
 	  system("unlink temp.txt");
-	  break;
-	case 5:
+
+	}
+	else if(strcmp( argv[x] ,"cd") == 0)
+	{
 	  strcpy(buf, "cd ");
-	  printf("Enter the path to change the remote directory: ");
+	  printf("Ingrese el directorio: ");
 	  scanf("%s", buf + 3);
           send(sock, buf, 100, 0);
 	  recv(sock, &status, sizeof(int), 0);
           if(status)
-            printf("Remote directory successfully changed\n");
+            printf("Movido al nuevo directorio.\n");
           else
-            printf("Remote directory failed to change\n");
-          break;
-	case 6:
-	  strcpy(buf, "quit");
+            printf("Fallo al cambiar de directorio.\n");
+         
+	}
+	else if(strcmp( argv[x] ,"disconnect") == 0)
+	{
+	  strcpy(buf, "disconnect");
           send(sock, buf, 100, 0);
           recv(sock, &status, 100, 0);
 	  if(status)
 	    {
-	      printf("Server closed\nQuitting..\n");
+	      printf("Desconectando del servidor.\n");
 	      exit(0);
 	    }
-	    printf("Server failed to close connection\n");
 	}
     }
+
 }
