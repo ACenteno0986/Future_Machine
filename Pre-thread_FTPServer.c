@@ -86,18 +86,17 @@ void* funcion_hilo(void*arg){
 void crear_hilos(){
 	  for(int i = 0; i<conexiones;i++ ){
 
-      printf("%d", i);
-
       pthread_create(&hilos[i],NULL,funcion_hilo,NULL);
     }
 }
 
 void* procesar_solicitud(int* cliente){
   i = 0;
-  while(1){
-
-      recv(*cliente, buf, 100, 0);
+  while(recv(*cliente, buf, 100, 0)){
+      
       sscanf(buf, "%s", command);
+      printf("%s", command);
+      
       if(!strcmp(command, "ls")){
 
 	      system("ls >temps.txt");
@@ -145,7 +144,7 @@ void* procesar_solicitud(int* cliente){
 	  close(filehandle);
 	  send(sock2, &c, sizeof(int), 0);
         }
-      else if(!strcmp(command, "pwd"))
+      else if(!strcmp(command, "connect"))
 	{
 	  system("pwd>temp.txt");
 	  i = 0;
@@ -166,12 +165,12 @@ void* procesar_solicitud(int* cliente){
         }
 
 
-      else if(!strcmp(command, "bye") || !strcmp(command, "quit"))
+      else if(!strcmp(command, "bye") || !strcmp(command, "disconnect"))
 	{
-	  printf("FTP server quitting..\n");
 	  i = 1;
 	  send(sock2, &i, sizeof(int), 0);
-	  exit(0);
+	  close(sock2);
+    break;
 	}
     }
 
